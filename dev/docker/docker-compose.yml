@@ -1,0 +1,121 @@
+version: "3.8"
+
+services:
+    db:
+        container_name: '${COMPOSE_PROJECT_NAME:-winfox}-db'
+        image: mariadb:10.3.37
+        command: --default-authentication-plugin=mysql_native_password
+        volumes:
+            - db_app:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-wp}
+            MYSQL_DATABASE: ${MYSQL_DATABASE:-wp}
+            MYSQL_USER: ${MYSQL_USER:-wp}
+            MYSQL_PASSWORD: ${MYSQL_USER_PASSWORD:-wp}
+        ports:
+            - ${MYSQL_PORT:-33060}:3306
+        networks:
+            - symfony
+        labels:
+            com.symfony.server.service-prefix: 'DATABASE'
+        healthcheck:
+            test: [ "CMD", "mysql" , "-h", "db", "-u${MYSQL_USER:-wp}", "-p${MYSQL_USER_PASSWORD:-wp}", "-e", "SELECT 1;", "${MYSQL_DATABASE:-wp}" ]
+            timeout: 5s
+            retries: 40
+        restart: on-failure
+
+    db_test:
+        container_name: '${COMPOSE_PROJECT_NAME:-winfox}-db-test'
+        image: mariadb:10.3.37
+        command: --default-authentication-plugin=mysql_native_password
+        volumes:
+            - /var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-wp}
+            MYSQL_DATABASE: ${MYSQL_DATABASE:-map}_test
+            MYSQL_USER: ${MYSQL_USER:-wp}
+            MYSQL_PASSWORD: ${MYSQL_USER_PASSWORD:-wp}
+        ports:
+            - ${MYSQL_TEST_PORT:-33061}:3306
+        networks:
+            - symfony
+        labels:
+            com.symfony.server.service-prefix: 'DATABASE'
+        healthcheck:
+            test: [ "CMD", "mysql" , "-h", "db_test", "-u${MYSQL_USER:-wp}", "-p${MYSQL_USER_PASSWORD:-wp}", "-e", "SELECT 1;", "${MYSQL_DATABASE:-map}_test" ]
+            timeout: 5s
+            retries: 40
+        restart: on-failure
+
+    php:
+        container_name: '${COMPOSE_PROJECT_NAME:-winfox}-php'
+        build:
+            context: ./php
+            args:
+                APP_USER: ${APP_USER:-wp}
+                APP_UID: ${APP_DEFAULT_UID:-1000}
+                APP_GID: ${APP_DEFAULT_GID:-1000}
+                TIMEZONE: "${TIMEZONE:-Europe/Moscow}"
+        environment:
+            - PHP_IDE_CONFIG=serverName=${COMPOSE_PROJECT_NAME:-winfox}
+            - XDEBUG_CONFIG=${PHP_XDEBUG_CONFIG}
+            - XDEBUG_MODE=${PHP_XDEBUG_MODE}
+            - COMPOSER_HOME=${COMPOSER_HOME:-/tmp/winfox}
+            - COMPOSER_AUTH=${COMPOSER_AUTH}
+        volumes:
+            - ${PROJECT_DIR:-../../}:/var/www/symfony/
+        networks:
+            - symfony
+        links:
+            - db
+            - db_test
+        depends_on:
+            - db
+        restart: on-failure
+
+    nginx:
+        container_name: '${COMPOSE_PROJECT_NAME:-winfox}-nginx'
+        build:
+            context: ./nginx
+        environment:
+            NGINX_BACKEND_DOMAIN: ${COMPOSE_PROJECT_NAME:-winfox}
+        volumes:
+            - ${PROJECT_DIR:-../../}:/var/www/symfony/
+        ports:
+            - ${NGINX_HTTP_PORT:-8080}:80
+        networks:
+            - symfony
+        depends_on:
+            - php
+        restart: on-failure
+
+    phpmyadmin:
+        image: phpmyadmin
+        ports:
+            - ${PHPMYADMIN_HTTP_PORT:-8088}:80
+        environment:
+            - PMA_ARBITRARY=0
+            - PMA_HOSTS=db,db_test
+            - PMA_USER=${MYSQL_USER:-wp}
+            - PMA_PASSWORD=${MYSQL_USER_PASSWORD:-wp}
+            - UPLOAD_LIMIT=1G
+        networks:
+            - symfony
+        restart: on-failure
+    node:
+        container_name: '${COMPOSE_PROJECT_NAME:-winfox}-node'
+        image: node:18-alpine
+        user: node
+        #command: sh -c "yarn install && yarn start"
+        working_dir: /var/www/symfony/frontend
+        volumes:
+            - ${PROJECT_DIR:-../../frontend}:/var/www/symfony/frontend
+        networks:
+            - symfony
+
+
+volumes:
+    db_app:
+
+networks:
+    symfony:
