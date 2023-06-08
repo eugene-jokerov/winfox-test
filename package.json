@@ -21,5 +21,9 @@
         "dev": "encore dev",
         "watch": "encore dev --watch",
         "build": "encore production --progress"
+    },
+    "dependencies": {
+        "@formkit/themes": "^0.17.2",
+        "@formkit/vue": "^0.17.2"
     }
 }

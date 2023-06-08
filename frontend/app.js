@@ -6,7 +6,11 @@
  */
 
 // any CSS you import will output into a single css file (app.css in this case)
+import '@formkit/themes/genesis'
 import './styles/app.css';
-import { registerVueControllerComponents } from '@symfony/ux-vue';
+import { createApp } from 'vue'
+import SignUpFormComponent from "./vue/controllers/SignUpFormComponent.vue";
+import { plugin, defaultConfig } from '@formkit/vue';
 
-registerVueControllerComponents(require.context('./vue/controllers', true, /\.vue$/));
+
+createApp(SignUpFormComponent).use(plugin, defaultConfig).mount('#app');
