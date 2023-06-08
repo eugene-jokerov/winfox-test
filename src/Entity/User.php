@@ -28,7 +28,7 @@ class User
     #[Groups(['users:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     #[Assert\NotBlank]
     #[Assert\Email(
         mode: Email::VALIDATION_MODE_STRICT
