@@ -107,9 +107,9 @@ services:
         image: node:18-alpine
         user: node
         #command: sh -c "yarn install && yarn start"
-        working_dir: /var/www/symfony/frontend
+        working_dir: /var/www/symfony
         volumes:
-            - ${PROJECT_DIR:-../../frontend}:/var/www/symfony/frontend
+            - ${PROJECT_DIR:-../../}:/var/www/symfony/
         networks:
             - symfony
 
